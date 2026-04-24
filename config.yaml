@@ -320,3 +320,45 @@ categories:
     secondary:
       - "LLM observability OTEL update"
       - "GenAI semconv release"
+
+  - id: self-hosting
+    name: "Self-hosting & deployment"
+    fetch_strategy: |
+      GitHub REST API for vllm, sglang, TGI, ollama. For r/LocalLLaMA top-of-day, WebFetch https://old.reddit.com/r/LocalLLaMA/top/?t=day — old.reddit is much more WebFetch-friendly than new Reddit. Filter posts with score > 200.
+    primary:
+      - { repo: "vllm-project/vllm", type: gh-releases }
+      - { repo: "sgl-project/sglang", type: gh-releases }
+      - { repo: "huggingface/text-generation-inference", type: gh-releases }
+      - { repo: "ollama/ollama", type: gh-releases }
+    secondary:
+      - "r/LocalLLaMA top today"
+      - "GGUF quantization new technique"
+      - "vLLM performance benchmark"
+
+  - id: ai-platform-devex
+    name: "AI platform & developer experience"
+    fetch_strategy: |
+      No single primary hub; this category leans on WebSearch against the named writers + HN. WebFetch latent.space, hamel.dev, and huyenchip.com landing pages for fresh content. Use HN Algolia API with query "internal AI platform" OR "prompt management" filtered to the window.
+    primary:
+      - { url: "https://latent.space", type: blog }
+      - { url: "https://hamel.dev/posts.html", type: blog }
+      - { url: "https://huyenchip.com", type: blog }
+    secondary:
+      - "internal AI platform architecture"
+      - "prompt registry production"
+      - "feature flags for LLM models"
+
+  - id: eu-ai-act
+    name: "EU AI Act & regulation (EU + Spain)"
+    fetch_strategy: |
+      All primary sources are HTML — use WebFetch on /actualidad or /news index pages, then WebFetch the individual article pages for substance. AESIA and Red.es content is in Spanish — summarize the findings in English for the digest body, but note the Spanish-language origin. No RSS on any of these three; HTML scraping is required. For EU-level news, the Commission's digital-strategy page is usually English + multilingual.
+    primary:
+      - { url: "https://digital-strategy.ec.europa.eu/en/policies/ai-act", type: blog }
+      - { url: "https://aesia.digital.gob.es/es/actualidad", type: blog-es }
+      - { url: "https://www.red.es/es/actualidad", type: blog-es }
+      - { url: "https://www.bsc.es/news", type: blog }
+    secondary:
+      - "EU AI Act implementation last week"
+      - "ENS certification AI España"
+      - "Reglamento IA España nuevo"
+      - "AESIA resolución"
