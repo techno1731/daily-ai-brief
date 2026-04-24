@@ -117,27 +117,30 @@ orchestrator_instructions: |
   - Else if degraded: use meta.subject_pattern_degraded.
   - Else: use meta.subject_pattern.
 
-  ## Step 8: Send via Resend
+  ## Step 8: Send via the mail proxy
+
+  Direct calls to api.resend.com are blocked by the /schedule sandbox outbound allowlist, so the routine POSTs a Resend-shaped payload to a thin proxy hosted on the operator's Vercel app. The proxy validates the bearer token and forwards to Resend server-side.
+
   Write the JSON payload to /tmp/digest-payload.json. The JSON must include:
   - from: meta.from_address
   - to: [meta.to_address]
   - reply_to: meta.reply_to
   - subject: (computed in Step 7)
-  - html: the rendered HTML from Step 6 (as a JSON string — escape correctly)
+  - html: the rendered HTML from Step 6 (as a JSON string, escaped correctly)
   - headers: { "List-Unsubscribe": "<" + meta.list_unsubscribe_mailto + ">", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" }
 
   Then run via Bash:
 
   ```bash
-  curl -sS -w "\nHTTP %{http_code}\n" -X POST https://api.resend.com/emails \
-    -H "Authorization: Bearer $RESEND_API_KEY" \
+  curl -sS -w "\nHTTP %{http_code}\n" -X POST https://ultrapowers.dev/api/email/send \
+    -H "Authorization: Bearer $MAIL_PROXY_SECRET" \
     -H "Content-Type: application/json" \
     -d @/tmp/digest-payload.json
   ```
 
   ### Retry policy
-  - HTTP 2xx → success. Extract the `id` field from the response body and log it. If you have the full response body in a shell variable or file, use `python3 -c 'import json,sys; print(json.load(sys.stdin).get("id",""))'` or `jq -r .id` — not regex on the raw JSON.
-  - HTTP 4xx → payload is wrong. Log the response body. Do NOT retry.
+  - HTTP 2xx → success. The response body is Resend's own response wrapped by the proxy; extract the message id via `python3 -c 'import json,sys; r=json.load(sys.stdin); print((r.get("data") or r).get("id",""))'` and log it.
+  - HTTP 4xx → payload or auth is wrong. Log the response body. Do NOT retry.
   - HTTP 5xx or network error → sleep 5 seconds and retry exactly once. If the retry also fails, log loudly and proceed to Step 9 anyway.
 
   ## Step 9: Log and exit
