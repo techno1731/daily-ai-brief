@@ -75,28 +75,32 @@ orchestrator_instructions: |
   - `{{EMERGING_PATTERNS_BLOCK}}` → same rule.
   - `{{RUN_NOTES_BLOCK}}` → if any category failed, render a block with header "Run notes" and a short sentence listing the failed categories; else empty string.
 
+  **Format: scan-optimized compact layout.** Each item is one readable line; Sapiens-angle is a tight second line only when non-null. Before rendering, truncate `summary` to its first sentence OR 140 chars, whichever is shorter.
+
   ### Category header HTML
   ```
-  <div style="margin-bottom:24px;">
-    <div style="font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:13px;color:#1a1a1a;text-transform:uppercase;letter-spacing:1px;padding:8px 0;border-bottom:1px solid #1a1a1a;font-weight:bold;">{{CATEGORY_NAME}}</div>
+  <div style="margin-bottom:18px;">
+    <div style="font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:12px;color:#666;text-transform:uppercase;letter-spacing:1.5px;padding:6px 0;border-bottom:1px solid #ddd;font-weight:bold;">{{CATEGORY_NAME}}</div>
     {{ITEMS_HTML}}
   </div>
   ```
 
-  ### Item HTML
+  ### Item HTML (compact, single-line primary)
   ```
-  <div style="padding:14px 0;border-bottom:1px solid #eeeeee;">
-    <div style="font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:16px;font-weight:bold;color:#1a1a1a;margin-bottom:6px;">{{HEADLINE}}</div>
-    <div style="font-family:Georgia,'Times New Roman',serif;font-size:15px;line-height:1.55;color:#1a1a1a;margin-bottom:6px;">{{SUMMARY}}</div>
+  <div style="padding:8px 0;border-bottom:1px solid #eeeeee;">
+    <div style="font-family:Georgia,'Times New Roman',serif;font-size:15px;line-height:1.5;color:#1a1a1a;"><strong style="font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;">{{HEADLINE}}</strong> &mdash; {{SUMMARY_TRUNCATED}} <a href="{{URL}}" style="color:#c14500;text-decoration:underline;white-space:nowrap;">{{URL_SHORT}}&nbsp;&#8599;</a></div>
     {{SAPIENS_ANGLE_BLOCK}}
-    <a href="{{URL}}" style="font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:13px;color:#c14500;text-decoration:underline;">{{URL_SHORT}} &#8599;</a>
   </div>
   ```
 
+  If the sub-agent returned an empty `summary` string (because the headline was self-contained), render the item without the em-dash and summary — headline becomes the whole line, followed directly by the link.
+
   ### Sapiens-angle block (render only if `sapiens_angle` is non-null)
   ```
-  <div style="font-family:Georgia,'Times New Roman',serif;font-size:14px;line-height:1.5;color:#c14500;font-style:italic;margin-bottom:6px;">&rarr; For Sapiens Lab: {{SAPIENS_ANGLE}}</div>
+  <div style="font-family:Georgia,'Times New Roman',serif;font-size:14px;line-height:1.45;color:#c14500;font-style:italic;margin-top:3px;">&rarr; {{SAPIENS_ANGLE}}</div>
   ```
+
+  Note: no "For Sapiens Lab:" prefix in the compact format — the italic rust color already signals the annotation. Saves horizontal space.
 
   `{{URL_SHORT}}` is the host + first path segment of the full URL (e.g., `anthropic.com/news`). This is for display only; the `href` uses the full URL.
 
@@ -189,15 +193,17 @@ sub_agent_prompt_template: |
     "nothing_notable": false,
     "items": [
       {
-        "headline": "One-line action-oriented headline.",
-        "summary": "2-3 sentences stating the concrete takeaway. Not 'X announced Y' — instead 'X's Y reduces latency by N%'.",
-        "sapiens_angle": "One line if concretely relevant; otherwise null.",
+        "headline": "Action-oriented, self-contained when possible. Put the key fact or number HERE if it fits.",
+        "summary": "ONE short sentence (<= 140 chars) with a supporting fact or number. Empty string if the headline is already self-contained.",
+        "sapiens_angle": "ONE concise line, <= 120 chars, only if CONCRETELY actionable for Sapiens Lab. null otherwise. Do not stretch.",
         "url": "https://..."
       }
     ],
     "errors": ["source URL or search query that failed — short strings"]
   }
   ```
+
+  **The user reads this email by scanning — compact matters more than comprehensive.** Multi-sentence summaries will be truncated to the first sentence on render, so write one punchy sentence with a number, not a paragraph. Put the key fact in the headline where you can.
 
   ### Canonical empty
   If there is genuinely nothing in your category for the window:
