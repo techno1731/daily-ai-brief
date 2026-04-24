@@ -208,4 +208,59 @@ sub_agent_prompt_template: |
   Return that — don't pad with weak items.
 
 # 11 categories. Filled in by Tasks 6, 7, 8.
-categories: []
+categories:
+  - id: model-releases
+    name: "Model releases & updates"
+    fetch_strategy: |
+      All primary sources are HTML blog pages — use WebFetch. For Hugging Face trending models, WebFetch the trending page once and summarize top entries. For "DeepSeek release" / "Qwen release" / "open weights release" secondary queries, use WebSearch with a `last 24 hours` hint.
+    primary:
+      - { url: "https://anthropic.com/news", type: blog }
+      - { url: "https://openai.com/news", type: blog }
+      - { url: "https://deepmind.google/discover/blog", type: blog }
+      - { url: "https://ai.meta.com/blog", type: blog }
+      - { url: "https://mistral.ai/news", type: blog }
+      - { url: "https://huggingface.co/blog", type: blog }
+      - { url: "https://huggingface.co/models?sort=trending", type: trending-list }
+    secondary:
+      - "Qwen release last 24h"
+      - "DeepSeek release last 24h"
+      - "open weights release last 24h"
+
+  - id: agents
+    name: "Agents & multi-agent systems"
+    fetch_strategy: |
+      All primary sources are GitHub repos — use GitHub REST API via Bash curl: `curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/OWNER/REPO/releases?per_page=5"`. Parse the JSON and extract `tag_name`, `name`, `body`, `published_at`, `html_url`. Include only releases where `published_at >= {{WINDOW_START_ISO}}`. For secondary sources (Simon Willison, Latent Space, Smol AI), use WebFetch against their landing pages.
+    primary:
+      - { repo: "anthropics/claude-agent-sdk", type: gh-releases }
+      - { repo: "langchain-ai/langgraph", type: gh-releases }
+      - { repo: "crewAIInc/crewAI", type: gh-releases }
+      - { repo: "microsoft/autogen", type: gh-releases }
+      - { repo: "openai/openai-agents-python", type: gh-releases }
+    secondary:
+      - "site:simonwillison.net agents last 24h"
+      - "latent.space agents this week"
+      - "smol.ai agent news"
+
+  - id: rag
+    name: "RAG"
+    fetch_strategy: |
+      arXiv Atom API is the primary fetch — use Bash curl: `curl -sS "https://export.arxiv.org/api/query?search_query=cat:cs.IR+OR+cat:cs.CL&sortBy=submittedDate&sortOrder=descending&max_results=50"`. Parse the Atom XML, filter entries where `<published>` is within the window, and keep items whose title or abstract contains retrieval-adjacent terms (RAG, retrieval-augmented, vector search, reranking, hybrid search, graph RAG, agentic RAG, chunking). For secondary sources, WebFetch eugeneyan.com and hamel.dev landing pages.
+    primary:
+      - { url: "https://export.arxiv.org/api/query?search_query=cat:cs.IR+OR+cat:cs.CL&sortBy=submittedDate&sortOrder=descending&max_results=50", type: arxiv-atom }
+    secondary:
+      - "eugeneyan.com RAG this week"
+      - "hamel.dev RAG this week"
+      - "graph RAG paper last 24h"
+      - "agentic RAG paper"
+
+  - id: mcp
+    name: "Model Context Protocol (MCP)"
+    fetch_strategy: |
+      GitHub REST API for spec releases and `servers` repo commits. For commits, use `curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/modelcontextprotocol/servers/commits?since={{WINDOW_START_ISO}}&per_page=30"`. WebFetch modelcontextprotocol.io for blog/changelog. For HN MCP-tag items, compute the epoch timestamp from `{{WINDOW_START_ISO}}` with Python (`python3 -c "import datetime; print(int(datetime.datetime.fromisoformat('{{WINDOW_START_ISO}}'.replace('Z','+00:00')).timestamp()))"`) and use it with the Algolia API: `curl -sS "https://hn.algolia.com/api/v1/search?query=mcp&tags=story&numericFilters=created_at_i>EPOCH,points>20"`. This is cross-platform (no BSD-vs-GNU `date` ambiguity).
+    primary:
+      - { repo: "modelcontextprotocol/specification", type: gh-releases }
+      - { repo: "modelcontextprotocol/servers", type: gh-commits }
+      - { url: "https://modelcontextprotocol.io", type: blog }
+    secondary:
+      - "site:news.ycombinator.com MCP last 24h"
+      - "Simon Willison MCP"
