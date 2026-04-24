@@ -264,3 +264,59 @@ categories:
     secondary:
       - "site:news.ycombinator.com MCP last 24h"
       - "Simon Willison MCP"
+
+  - id: claude-skills-code
+    name: "Claude Skills & Claude Code"
+    fetch_strategy: |
+      WebFetch anthropic.com/news and filter for Claude Code / Skills / Cowork mentions. WebFetch docs.claude.com/en/release-notes/claude-code. For community skills, WebSearch "Claude Code skill" and filter for GitHub repos with recent commits. r/ClaudeAI top-of-day via WebFetch against the subreddit (if HTML returns useful content) or WebSearch.
+    primary:
+      - { url: "https://anthropic.com/news", type: blog }
+      - { url: "https://docs.claude.com/en/release-notes/claude-code", type: changelog }
+    secondary:
+      - "Claude Code skill new release"
+      - "Claude Code routine this week"
+      - "r/ClaudeAI top post today"
+
+  - id: llm-gateways
+    name: "LLM gateways & proxies"
+    fetch_strategy: |
+      GitHub REST API for the three OSS gateways (LiteLLM, Helicone, Portkey). Kong and Cloudflare changelogs via WebFetch. For HN, Algolia API with query "LLM gateway" OR "LiteLLM".
+    primary:
+      - { repo: "BerriAI/litellm", type: gh-releases }
+      - { repo: "Helicone/helicone", type: gh-releases }
+      - { repo: "Portkey-AI/gateway", type: gh-releases }
+      - { url: "https://docs.konghq.com/hub/kong-inc/ai-proxy/changelog/", type: changelog }
+      - { url: "https://developers.cloudflare.com/ai-gateway/reference/changelog/", type: changelog }
+    secondary:
+      - "LiteLLM release notes this week"
+      - "LLM gateway production"
+
+  - id: evals
+    name: "Evaluation frameworks"
+    fetch_strategy: |
+      GitHub REST API for the OSS eval libraries. WebFetch Braintrust blog and LangSmith changelog. For arXiv, narrow Atom query to eval-related keywords via title/abstract filter after fetch: `curl -sS "https://export.arxiv.org/api/query?search_query=cat:cs.CL+AND+abs:evaluation&sortBy=submittedDate&sortOrder=descending&max_results=30"`.
+    primary:
+      - { repo: "confident-ai/deepeval", type: gh-releases }
+      - { repo: "explodinggradients/ragas", type: gh-releases }
+      - { repo: "promptfoo/promptfoo", type: gh-releases }
+      - { repo: "UKGovernmentBEIS/inspect_ai", type: gh-releases }
+      - { url: "https://www.braintrust.dev/blog", type: blog }
+      - { url: "https://changelog.langchain.com", type: changelog }
+    secondary:
+      - "LLM evaluation paper last 24h"
+      - "LLM-as-judge new technique"
+
+  - id: observability
+    name: "LLM observability"
+    fetch_strategy: |
+      GitHub REST API for Langfuse, Arize Phoenix, OpenLLMetry. LangSmith changelog via WebFetch. Helicone blog via WebFetch. For OpenTelemetry GenAI semconv, check github.com/open-telemetry/semantic-conventions commits (gh-commits).
+    primary:
+      - { repo: "langfuse/langfuse", type: gh-releases }
+      - { repo: "Arize-ai/phoenix", type: gh-releases }
+      - { repo: "traceloop/openllmetry", type: gh-releases }
+      - { repo: "open-telemetry/semantic-conventions", type: gh-commits }
+      - { url: "https://changelog.langchain.com", type: changelog }
+      - { url: "https://www.helicone.ai/blog", type: blog }
+    secondary:
+      - "LLM observability OTEL update"
+      - "GenAI semconv release"
