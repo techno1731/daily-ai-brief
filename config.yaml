@@ -1,0 +1,29 @@
+# Daily AI Brief — runtime configuration
+# This file is WebFetched at the start of every /schedule run.
+# Iterate freely: git commit + push. Next run uses the new config.
+
+thresholds:
+  degraded_run_category_failures: 6
+  max_items_per_category: 5
+
+meta:
+  from_address: "AI Brief <onboarding@resend.dev>"
+  to_address: "techno1731@gmail.com"
+  reply_to: "techno1731@gmail.com"
+  list_unsubscribe_mailto: "mailto:techno1731@gmail.com?subject=unsubscribe"
+  subject_pattern: "[AI Brief] {{DAY}} {{YYYY_MM_DD}} — {{TOTAL_ITEMS}} items across {{ACTIVE_CATEGORY_COUNT}} categories"
+  subject_pattern_degraded: "[DEGRADED RUN] [AI Brief] {{DAY}} {{YYYY_MM_DD}} — {{TOTAL_ITEMS}} items across {{ACTIVE_CATEGORY_COUNT}} categories"
+  subject_pattern_quiet: "[AI Brief] {{DAY}} {{YYYY_MM_DD}} — Quiet day, nothing notable"
+
+# Step-by-step instructions the orchestrator follows verbatim.
+# Filled in by Task 4.
+orchestrator_instructions: |
+  (TBD — filled in by Task 4)
+
+# Prompt template rendered once per category and dispatched to a sub-agent.
+# Filled in by Task 5.
+sub_agent_prompt_template: |
+  (TBD — filled in by Task 5)
+
+# 11 categories. Filled in by Tasks 6, 7, 8.
+categories: []
