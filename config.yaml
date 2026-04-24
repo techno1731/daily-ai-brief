@@ -7,7 +7,7 @@ thresholds:
   max_items_per_category: 5
 
 meta:
-  from_address: "AI Brief <onboarding@resend.dev>"
+  from_address: "AI Brief <brief@ultrapowers.dev>"
   to_address: "techno1731@gmail.com"
   reply_to: "techno1731@gmail.com"
   list_unsubscribe_mailto: "mailto:techno1731@gmail.com?subject=unsubscribe"

@@ -17,7 +17,7 @@ This project builds a recurring daily AI intelligence briefing delivered by emai
 - Covers 11 prioritized categories (see Source Map).
 - Grounded in concrete primary sources (GitHub releases, official blogs, arXiv API), not hype threads.
 - Calls out EU AI Act / Spanish public sector relevance explicitly.
-- Delivered as a well-designed HTML email to `techno1731@gmail.com` by 07:30 Europe/Madrid on weekdays, sent via **Resend** (transactional email API).
+- Delivered as a well-designed HTML email to `techno1731@gmail.com` by 07:30 Europe/Madrid on weekdays, sent via **Resend** (transactional email API) from a branded `brief@ultrapowers.dev` verified sender (DKIM + DMARC aligned).
 - Trivial to iterate on: editing sources or prompts is a git push, not a routine redeploy.
 
 ## Non-goals (v1)
@@ -30,7 +30,6 @@ This project builds a recurring daily AI intelligence briefing delivered by emai
 - Langfuse tracing (deferred until a K8s-hosted version).
 - Twitter/X as a source (poor signal/noise, bad WebFetch).
 - Per-run cost tracking beyond what the Anthropic console already provides.
-- Verified custom sending domain (v1 uses Resend's `onboarding@resend.dev`; custom domain is v1.5).
 
 ## Architecture
 
@@ -185,7 +184,7 @@ Scannable preview, sortable by date, item count reflects slow vs busy days.
 
 Resend sets the following via API parameters or auto-applies. All are required for 2026 Gmail deliverability (Gmail's bulk-sender rules from Feb 2024 are effectively required even at low volume):
 
-- `From: "AI Brief" <onboarding@resend.dev>` (v1; custom domain in v1.5)
+- `From: "AI Brief" <brief@ultrapowers.dev>` (verified domain in the Resend account; DKIM/DMARC aligned automatically)
 - `To: techno1731@gmail.com`
 - `Reply-To: techno1731@gmail.com`
 - `List-Unsubscribe: <mailto:techno1731@gmail.com?subject=unsubscribe>`
@@ -299,7 +298,7 @@ daily-ai-brief/
 
 1. `git init` locally, scaffold files, commit.
 2. Create `github.com/techno1731/daily-ai-brief` (public), push.
-3. Sign up for Resend (free tier — 100 emails/day, 3000/month). Create an API key. No domain verification needed in v1 — we use Resend's shared `onboarding@resend.dev` as the From address.
+3. Resend account: API key from `ultrapowers.dev`-verified account (reused from existing ultrapowers-web Vercel prod env). Verified domain means unrestricted recipients and DKIM/DMARC-aligned delivery.
 4. (Optional but recommended) Create a GitHub Personal Access Token with `public_repo` scope (read-only is sufficient since all our GitHub sources are public). Raises unauth rate limit from 60/hr to 5000/hr.
 5. Run `/schedule create`, paste contents of `routine-prompt.md`. Set cron `30 7 * * 1-5`, timezone `Europe/Madrid`. Add env vars:
    - `RESEND_API_KEY=re_...` (required)
@@ -316,7 +315,7 @@ daily-ai-brief/
 
 Logged here so they don't clutter v1 but aren't lost:
 
-- **Custom sending domain** — verify `sapiens.lab` (or similar) with Resend, switch From to `brief@sapiens.lab`. Makes this portfolio-visible and improves Gmail placement further. v1.5.
+<!-- Custom sending domain (brief@ultrapowers.dev) was promoted from v1.5 to v1 during implementation when the existing Resend account was found to have ultrapowers.dev already verified. Future: if Sapiens Lab gets its own domain, switch From to brief@sapiens.lab to make this portfolio-visible under that brand. -->
 - **Langfuse tracing** — port to K8s-hosted runner so traces flow to self-hosted Langfuse. Required before this is a Sapiens Lab reference implementation, not just personal tooling.
 - **Persisted since-last-run state** — gist or tiny repo storing last-successful-run timestamp.
 - **Heartbeat** — separate cron that checks whether the 07:30 email arrived, pings user if not.
@@ -335,4 +334,4 @@ Logged here so they don't clutter v1 but aren't lost:
 - Project home: `/Users/techno1731/Code/Personal/daily-ai-brief`. ✅
 - Workflow prefs: auto-commit on, auto-push off, commit design docs on. ✅
 - AESIA URL: `aesia.digital.gob.es/es` (not `aesia.gob.es`, which doesn't exist). ✅
-- Sending domain: Resend shared sender (`onboarding@resend.dev`) for v1; custom domain deferred to v1.5. ✅
+- Sending domain: `brief@ultrapowers.dev` — verified during implementation using the existing Resend account from ultrapowers-web (promoted from v1.5 to v1 since the domain was already DKIM-ready). ✅
