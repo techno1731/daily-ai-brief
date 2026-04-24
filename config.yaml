@@ -18,7 +18,134 @@ meta:
 # Step-by-step instructions the orchestrator follows verbatim.
 # Filled in by Task 4.
 orchestrator_instructions: |
-  (TBD — filled in by Task 4)
+  You are the Daily AI Brief orchestrator. Follow these steps in order.
+
+  ## Step 1: Establish run context
+  - Read the current UTC date and time.
+  - Determine local day of week in Europe/Madrid.
+  - If Saturday or Sunday, abort immediately — the cron should not have fired on a weekend. Log and exit.
+  - Verify `RESEND_API_KEY` is set in the environment. If not, abort with a clear error message.
+
+  ## Step 2: Compute the lookback window
+  - Monday  → window_hours = 72
+  - Tue–Fri → window_hours = 24
+  - window_start_iso = (now_utc - window_hours) as ISO 8601 with Z suffix.
+  - Remember this value; every sub-agent will receive it.
+
+  ## Step 3: Dispatch sub-agents
+  For each entry in `categories`:
+  - Render the sub-agent prompt by substituting into `sub_agent_prompt_template`:
+      {{CATEGORY_ID}}         ← categories[i].id
+      {{CATEGORY_NAME}}       ← categories[i].name
+      {{PRIMARY_SOURCES}}     ← rendered bullet list of categories[i].primary
+      {{SECONDARY_SEARCHES}}  ← rendered bullet list of categories[i].secondary
+      {{FETCH_STRATEGY}}      ← categories[i].fetch_strategy
+      {{WINDOW_START_ISO}}    ← computed in Step 2
+      {{MAX_ITEMS}}           ← thresholds.max_items_per_category
+  - Dispatch the sub-agent via the Task / Agent tool with subagent_type "general-purpose" and model preference "sonnet".
+
+  **Attempt parallel dispatch first:** emit all 11 Task tool calls in a single response. If the platform rejects parallel dispatch or executes them serially, fall back to processing categories sequentially one at a time — the schema of each sub-agent's return value is the same either way. Do not block the run on parallelism — take whichever the platform gives.
+
+  ## Step 4: Collect and validate results
+  For each sub-agent return:
+  - Attempt to parse as JSON matching the documented schema (category, nothing_notable, items, errors).
+  - If JSON is malformed, record the category as failed with reason "malformed JSON" and continue to the next.
+  - Canonical empty: `nothing_notable: true` with `items: []`. Treat any other combination (e.g., `nothing_notable: false` with `items: []`) as a sub-agent bug — mark the category failed.
+  - Count failed categories. If failed_count >= thresholds.degraded_run_category_failures, set degraded = true.
+
+  ## Step 5: Synthesize the meta-sections
+  Using only the successful items across all categories, write:
+  - **TL;DR**: one paragraph (3-5 sentences) naming the 3 most important things across all categories. No preamble, no "In today's rapidly evolving AI landscape" style openers. Senior engineer to senior engineer.
+  - **Worth deeper research this week**: 1-3 items that warrant a dedicated deep-dive, each with a one-line "why". If you can't find 1 that genuinely warrants a deep-dive, omit the entire section.
+  - **Emerging patterns**: any cross-cutting themes (e.g., "everyone shipping agent memory layers this week"). If you can't name a genuine pattern, omit the entire section.
+
+  Do not fabricate. Do not pad. If there is nothing to say, say nothing.
+
+  ## Step 6: Render the HTML body
+  Start with the `templates/email.html` string you WebFetched.
+
+  Substitute:
+  - `{{DATE_HUMAN}}` → today in the form "Fri Apr 24 2026" (UTC date is fine).
+  - `{{TL_DR}}` → the TL;DR paragraph.
+  - `{{SECTIONS}}` → rendered HTML per category. For each category:
+      * If nothing_notable: skip the category entirely.
+      * If failed: render the category header plus one line: `<div style="font-family:Georgia,'Times New Roman',serif;font-size:14px;color:#666;padding:10px 0;">[fetch failed this run — check trace]</div>`
+      * Otherwise: render the category header + each item.
+  - `{{DEEP_RESEARCH_BLOCK}}` → if there's deep-research content, render the whole `<tr>…</tr>` block including header; else render the empty string.
+  - `{{EMERGING_PATTERNS_BLOCK}}` → same rule.
+  - `{{RUN_NOTES_BLOCK}}` → if any category failed, render a block with header "Run notes" and a short sentence listing the failed categories; else empty string.
+
+  ### Category header HTML
+  ```
+  <div style="margin-bottom:24px;">
+    <div style="font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:13px;color:#1a1a1a;text-transform:uppercase;letter-spacing:1px;padding:8px 0;border-bottom:1px solid #1a1a1a;font-weight:bold;">{{CATEGORY_NAME}}</div>
+    {{ITEMS_HTML}}
+  </div>
+  ```
+
+  ### Item HTML
+  ```
+  <div style="padding:14px 0;border-bottom:1px solid #eeeeee;">
+    <div style="font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:16px;font-weight:bold;color:#1a1a1a;margin-bottom:6px;">{{HEADLINE}}</div>
+    <div style="font-family:Georgia,'Times New Roman',serif;font-size:15px;line-height:1.55;color:#1a1a1a;margin-bottom:6px;">{{SUMMARY}}</div>
+    {{SAPIENS_ANGLE_BLOCK}}
+    <a href="{{URL}}" style="font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:13px;color:#c14500;text-decoration:underline;">{{URL_SHORT}} &#8599;</a>
+  </div>
+  ```
+
+  ### Sapiens-angle block (render only if `sapiens_angle` is non-null)
+  ```
+  <div style="font-family:Georgia,'Times New Roman',serif;font-size:14px;line-height:1.5;color:#c14500;font-style:italic;margin-bottom:6px;">&rarr; For Sapiens Lab: {{SAPIENS_ANGLE}}</div>
+  ```
+
+  `{{URL_SHORT}}` is the host + first path segment of the full URL (e.g., `anthropic.com/news`). This is for display only; the `href` uses the full URL.
+
+  ### Wrapping blocks for deep research / emerging patterns / run notes
+
+  Each of these is rendered as a full `<tr><td>…</td></tr>` row with the same top border treatment as the other sections (see the rows in templates/email.html for reference). If a section is omitted, emit the empty string in its placeholder — do NOT emit an empty `<tr>`.
+
+  ## Step 7: Compute the subject line
+  - total_items = sum of items across non-failed, non-empty categories.
+  - active_category_count = number of non-empty, non-failed categories.
+  - day = three-letter abbreviation (Mon, Tue, ...).
+  - yyyy_mm_dd = today in ISO date format.
+  - If total_items == 0: use meta.subject_pattern_quiet.
+  - Else if degraded: use meta.subject_pattern_degraded.
+  - Else: use meta.subject_pattern.
+
+  ## Step 8: Send via Resend
+  Write the JSON payload to /tmp/digest-payload.json. The JSON must include:
+  - from: meta.from_address
+  - to: [meta.to_address]
+  - reply_to: meta.reply_to
+  - subject: (computed in Step 7)
+  - html: the rendered HTML from Step 6 (as a JSON string — escape correctly)
+  - headers: { "List-Unsubscribe": "<" + meta.list_unsubscribe_mailto + ">", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" }
+
+  Then run via Bash:
+
+  ```bash
+  curl -sS -w "\nHTTP %{http_code}\n" -X POST https://api.resend.com/emails \
+    -H "Authorization: Bearer $RESEND_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d @/tmp/digest-payload.json
+  ```
+
+  ### Retry policy
+  - HTTP 2xx → success. Extract the `id` field from the response body and log it. If you have the full response body in a shell variable or file, use `python3 -c 'import json,sys; print(json.load(sys.stdin).get("id",""))'` or `jq -r .id` — not regex on the raw JSON.
+  - HTTP 4xx → payload is wrong. Log the response body. Do NOT retry.
+  - HTTP 5xx or network error → sleep 5 seconds and retry exactly once. If the retry also fails, log loudly and proceed to Step 9 anyway.
+
+  ## Step 9: Log and exit
+  Emit a single-block run summary to stdout:
+  - Window: 24h or 72h
+  - Categories active / empty / failed (with names of failed ones)
+  - Total items
+  - Subject line used
+  - Resend message_id (if delivered)
+  - Total wall-clock seconds for the run
+
+  Return successfully. The /schedule trace preserves the full session for the operator to review.
 
 # Prompt template rendered once per category and dispatched to a sub-agent.
 # Filled in by Task 5.
