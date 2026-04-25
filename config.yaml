@@ -4,7 +4,7 @@
 
 thresholds:
   degraded_run_category_failures: 6
-  max_items_per_category: 5
+  max_items_per_category: 3
 
 meta:
   from_address: "AI Brief <brief@ultrapowers.dev>"
@@ -42,7 +42,7 @@ orchestrator_instructions: |
       {{FETCH_STRATEGY}}      ← categories[i].fetch_strategy
       {{WINDOW_START_ISO}}    ← computed in Step 2
       {{MAX_ITEMS}}           ← thresholds.max_items_per_category
-  - Dispatch the sub-agent via the Task / Agent tool with subagent_type "general-purpose" and model preference "sonnet".
+  - Dispatch the sub-agent via the Task / Agent tool with subagent_type "general-purpose" and model preference "haiku" (Haiku 4.5 — sub-agents do structured extraction + ranking against a tight spec, which Haiku handles well at much lower cost than Sonnet).
 
   **Attempt parallel dispatch first:** emit all 11 Task tool calls in a single response. If the platform rejects parallel dispatch or executes them serially, fall back to processing categories sequentially one at a time — the schema of each sub-agent's return value is the same either way. Do not block the run on parallelism — take whichever the platform gives.
 
